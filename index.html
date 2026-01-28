@@ -8,111 +8,120 @@
         body {
             background-color: #0f172a; /* Dark Blue */
             color: white;
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        h1 { text-align: center; color: #4ade80; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: #4ade80; margin-bottom: 30px; }
         .loading { text-align: center; color: #94a3b8; }
         
         /* Card Design */
         .match-card {
             background-color: #1e293b;
             border: 1px solid #334155;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
         }
-        .series-name {
-            font-size: 10px;
+        .match-card:hover { transform: translateY(-2px); border-color: #4ade80; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
             color: #94a3b8;
+            margin-bottom: 15px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
         }
-        .live-tag { color: #ef4444; font-weight: bold; }
+        .status-live { color: #ef4444; font-weight: bold; animation: pulse 2s infinite; }
         
-        .teams-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .team { font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
-        .score { font-family: monospace; font-size: 1.2rem; color: #4ade80; }
-        .result {
-            background-color: #0f172a;
-            padding: 8px;
-            border-radius: 5px;
-            text-align: center;
+        .teams { display: flex; flex-direction: column; gap: 10px; }
+        .team-row { display: flex; justify-content: space-between; align-items: center; }
+        .team-name { font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+        .team-score { font-family: monospace; font-size: 1.2rem; color: #fff; }
+        
+        .status-text {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #334155;
             font-size: 0.9rem;
-            color: #facc15;
+            color: #facc15; /* Yellow */
+            text-align: center;
         }
-        img { width: 30px; height: 30px; object-fit: contain; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🏏 Live Scores</h1>
+        <h1>🏏 Live Match Center</h1>
         <div id="matches-container">
-            <p class="loading">Loading matches...</p>
+            <p class="loading">Loading live matches...</p>
         </div>
     </div>
 
     <script>
         async function fetchLiveScores() {
             try {
-                // Call our own backend file
                 const response = await fetch('/api/score'); 
                 const data = await response.json();
                 
-                const matches = data.res.tM || [];
+                // ESPN ka data structure alag hota hai
+                const matches = data.content ? data.content.matches : [];
                 const container = document.getElementById('matches-container');
                 
-                if(matches.length === 0) {
-                    container.innerHTML = '<p class="loading">No live matches currently.</p>';
+                if(!matches || matches.length === 0) {
+                    container.innerHTML = '<p class="loading">No matches found right now.</p>';
                     return;
                 }
 
                 let html = '';
+                
+                // Sirf wahi matches dikhaye jo Live hain ya abhi khatam huye
                 matches.forEach(match => {
-                    // Logic to show Live or Finished status
-                    const isLive = match.st === 0;
-                    const statusText = isLive ? '• LIVE' : (match.rl ? 'FINISHED' : 'UPCOMING');
+                    // Teams data nikalna
+                    const team1 = match.teams[0];
+                    const team2 = match.teams[1];
+                    
+                    // Live status check
+                    const isLive = match.state === "LIVE";
+                    const statusClass = isLive ? 'status-live' : '';
+                    const statusText = isLive ? '• LIVE' : match.state;
 
                     html += `
                         <div class="match-card">
-                            <div class="series-name">
-                                <span>${match.sr}</span>
-                                <span class="${isLive ? 'live-tag' : ''}">${statusText}</span>
+                            <div class="header">
+                                <span>${match.series ? match.series.name : 'Match'}</span>
+                                <span class="${statusClass}">${statusText}</span>
                             </div>
                             
-                            <div class="teams-row">
-                                <div class="team">
-                                    <img src="https://img1.hscicdn.com/image/upload/f_auto,t_ds_square_w_80/lsci/db/PICTURES/CMS/${match.teams.t1.k}.png" onerror="this.style.display='none'">
-                                    ${match.teams.t1.s}
+                            <div class="teams">
+                                <div class="team-row">
+                                    <div class="team-name">
+                                        ${team1.team.name}
+                                    </div>
+                                    <div class="team-score">
+                                        ${team1.score || ''}
+                                    </div>
                                 </div>
-                                <div class="score">${match.teams.t1.sc || ''}</div>
+
+                                <div class="team-row">
+                                    <div class="team-name">
+                                        ${team2.team.name}
+                                    </div>
+                                    <div class="team-score">
+                                        ${team2.score || ''}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="teams-row">
-                                <div class="team">
-                                    <img src="https://img1.hscicdn.com/image/upload/f_auto,t_ds_square_w_80/lsci/db/PICTURES/CMS/${match.teams.t2.k}.png" onerror="this.style.display='none'">
-                                    ${match.teams.t2.s}
-                                </div>
-                                <div class="score">${match.teams.t2.sc || ''}</div>
-                            </div>
-
-                            <div class="result">
-                                ${match.rl ? match.rl.msg : (match.toss || 'Match starting soon')}
+                            <div class="status-text">
+                                ${match.statusText || 'Match info updating...'}
                             </div>
                         </div>
                     `;
@@ -125,10 +134,8 @@
             }
         }
 
-        // Load initially
         fetchLiveScores();
-        // Refresh every 10 seconds
-        setInterval(fetchLiveScores, 10000);
+        setInterval(fetchLiveScores, 30000); // 30 seconds refresh
     </script>
 </body>
 </html>
